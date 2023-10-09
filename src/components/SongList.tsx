@@ -5,7 +5,7 @@ import type { Song } from "../types";
 import Delete from "../assets/x-mark.svg";
 import Plus from "../assets/plus.svg";
 
-function SongList() {
+const SongList: React.FC = (props) => {
   const { songs, addSong, deleteSong } = useSongs();
   const [newSong, setNewSong] = useState("");
 
@@ -42,6 +42,6 @@ function SongList() {
       </ul>
     </div>
   );
-}
+};
 
 export default SongList;
