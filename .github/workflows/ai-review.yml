@@ -8,8 +8,7 @@ on:
   pull_request:
     types: [opened]
     branches-ignore:
-      - master
-      - main
+      - develop
   pull_request_review_comment:
     types: [created]
   issue_comment:
