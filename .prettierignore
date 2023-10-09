@@ -1,0 +1,14 @@
+# ビルドディレクトリを無視
+/dist
+
+# Node モジュールを無視
+/node_modules
+
+# Tauri ディレクトリを無視
+/src-tauri
+
+# コンパイルされたファイルを無視
+*.min.js
+
+# CSS ファイルを無視
+*.css
