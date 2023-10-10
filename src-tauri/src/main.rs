@@ -68,7 +68,7 @@ fn get_songs(app_state: tauri::State<AppState>) -> Vec<Song> {
 }
 
 #[tauri::command]
-fn add_song(song: String, app_state: tauri::State<AppState>) {
+fn add_song(song: String, app_state: tauri::State<AppState>) -> bool {
   let mut songs = app_state.songs.lock().unwrap();
   let lenght = songs.len() + 1;
   songs.push(
@@ -78,14 +78,14 @@ fn add_song(song: String, app_state: tauri::State<AppState>) {
       artist: "".to_string(),
     }
   );
-  true;
+  return true;
 }
 
 #[tauri::command]
-fn delete_song(index: usize, app_state: tauri::State<AppState>) {
+fn delete_song(index: usize, app_state: tauri::State<AppState>) -> bool  {
   let mut songs = app_state.songs.lock().unwrap();
   songs.remove(index);
-  true;
+  return true;
 }
 
 #[tauri::command]
