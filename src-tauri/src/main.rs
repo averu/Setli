@@ -70,10 +70,10 @@ fn get_songs(app_state: tauri::State<AppState>) -> Vec<Song> {
 #[tauri::command]
 fn add_song(song: String, app_state: tauri::State<AppState>) -> bool {
   let mut songs = app_state.songs.lock().unwrap();
-  let lenght = songs.len() + 1;
+  let length = songs.len() + 1;
   songs.push(
     Song {
-      id: lenght,
+      id: length,
       title: song,
       artist: "".to_string(),
     }
