@@ -1,45 +1,37 @@
-import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api";
-import type { Song } from "../types";
+import { useState, useEffect } from 'react'
+import { invoke } from '@tauri-apps/api'
+import type { Song } from '../types'
+import { withOBSHandling } from '../utils/errorHandler' // ここでエラーハンドリングユーティリティをインポートします。
 
 export function useSongs() {
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [songs, setSongs] = useState<Song[]>([])
 
   useEffect(() => {
-    async function fetchData() {
-      await getSongs();
-    }
-    fetchData();
-  }, []);
+    getSongs()
+  }, [])
 
   async function getSongs() {
-    try {
-      const result = await invoke<Song[]>("get_songs");
-      setSongs(result);
-    } catch (error) {
-      console.error("Error fetching songs:", error);
+    const result = await withOBSHandling(invoke<Song[]>('get_songs'), 'Error fetching songs')
+    if (result) {
+      setSongs(result)
     }
   }
 
   async function addSong(song: string) {
-    try {
-      await invoke("add_song", { song });
-      await getSongs();
-    } catch (error) {
-      console.error("Error adding song:", error);
+    const result = await withOBSHandling(invoke('add_song', { song }), 'Error adding song')
+    if (!result) {
+      await getSongs()
     }
   }
 
   async function deleteSong(index: number) {
-    try {
-      await invoke("delete_song", { index });
-      await getSongs();
-    } catch (error) {
-      console.error("Error deleting song:", error);
+    const result = await withOBSHandling(invoke('delete_song', { index }), 'Error deleting song')
+    if (!result) {
+      await getSongs()
     }
   }
 
-  return { songs, addSong, deleteSong };
+  return { songs, addSong, deleteSong }
 }
 
-export default useSongs;
+export default useSongs

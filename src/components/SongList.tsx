@@ -1,32 +1,27 @@
-import React, { useState } from "react";
-import { useSongs } from "../hooks/useSongs";
-import styles from "./SongList.module.css";
-import type { Song } from "../types";
-import Delete from "../assets/x-mark.svg";
-import Plus from "../assets/plus.svg";
+import React, { useState } from 'react'
+import { useSongs } from '../hooks/useSongs'
+import styles from './SongList.module.css'
+import type { Song } from '../types'
+import Delete from '../assets/x-mark.svg'
+import Plus from '../assets/plus.svg'
 
-function SongList() {
-  const { songs, addSong, deleteSong } = useSongs();
-  const [newSong, setNewSong] = useState("");
+const SongList: React.FC = (props) => {
+  const { songs, addSong, deleteSong } = useSongs()
+  const [newSong, setNewSong] = useState('')
 
   const handleAddSong = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (newSong.trim()) {
-      await addSong(newSong);
-      setNewSong("");
+      await addSong(newSong)
+      setNewSong('')
     }
-  };
+  }
 
   return (
     <div className={styles.songList}>
       <form onSubmit={handleAddSong}>
-        <input
-          type="text"
-          name="song"
-          value={newSong}
-          onChange={(e) => setNewSong(e.target.value)}
-        />
-        <button type="submit">
+        <input type='text' name='song' value={newSong} onChange={(e) => setNewSong(e.target.value)} />
+        <button type='submit'>
           <img src={Plus} />
         </button>
       </form>
@@ -41,7 +36,7 @@ function SongList() {
         ))}
       </ul>
     </div>
-  );
+  )
 }
 
-export default SongList;
+export default SongList

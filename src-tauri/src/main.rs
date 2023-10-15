@@ -8,8 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{self, Map, Value};
 use std::sync::{Arc, Mutex};
 
-#[derive(Serialize, Deserialize, Clone)]
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 struct Song {
   id: usize,
   title: String,
@@ -44,20 +43,19 @@ struct AppState {
 
 impl AppState {
   pub fn new() -> Self {
-    let settings = Some(Settings {
-      scene_name: "シーン".to_string(),
-      text_name: "setli".to_string(),
-      font_family: "Arial".to_string(),
-      font_color: 0,
-      outline: true,
-      outline_width: 1,
-      outline_color: 0,
-      line_breaks: 1,
-    });
     Self {
       client: Arc::new(Mutex::new(None)),
       songs: Arc::new(Mutex::new(Vec::new())),
-      settings: Arc::new(Mutex::new(settings)),
+      settings: Arc::new(Mutex::new(Some(Settings {
+        scene_name: "シーン".into(),
+        text_name: "setli".into(),
+        font_family: "Arial".into(),
+        font_color: 0,
+        outline: true,
+        outline_width: 1,
+        outline_color: 0,
+        line_breaks: 1,
+      }))),
     }
   }
 }
@@ -70,22 +68,32 @@ fn get_songs(app_state: tauri::State<AppState>) -> Vec<Song> {
 }
 
 #[tauri::command]
-fn add_song(song: String, app_state: tauri::State<AppState>) {
-  let mut songs = app_state.songs.lock().unwrap();
-  let lenght = songs.len() + 1;
-  songs.push(
-    Song {
-      id: lenght,
-      title: song,
-      artist: "".to_string(),
-    }
-  );
+fn add_song(song: String, app_state: tauri::State<AppState>) -> Result<(), String> {
+    let mut songs = match app_state.songs.lock() {
+        Ok(songs) => songs,
+        Err(_) => return Err("Failed to lock app state.".to_string()),
+    };
+
+    let new_id = songs.len() + 1;
+
+    songs.push(
+        Song {
+            id: new_id,
+            title: song,
+            artist: "".to_string(),
+        }
+    );
+    Ok(())
 }
 
 #[tauri::command]
-fn delete_song(index: usize, app_state: tauri::State<AppState>) {
-  let mut songs = app_state.songs.lock().unwrap();
-  songs.remove(index);
+fn delete_song(index: usize, app_state: tauri::State<AppState>) -> Result<(), String> {
+    let mut songs = match app_state.songs.lock() {
+        Ok(songs) => songs,
+        Err(_) => return Err("Failed to lock app state.".to_string()),
+    };
+    songs.remove(index);
+    Ok(())
 }
 
 #[tauri::command]
@@ -147,10 +155,12 @@ async fn connect_send(config: ConnectionInfo) -> Result<Client, Error> {
   Ok(client)
 }
 
-async fn update_settings(settings: Settings, app_state: tauri::State<'_, AppState>) -> () {
-  let client = app_state.client.lock().unwrap();
-  let mut settings_guard = app_state.settings.lock().unwrap();
-  let inputs_settings = match client.as_ref().unwrap().inputs().settings::<serde_json::Value>(&settings.text_name.clone()).await {
+async fn update_settings(settings: Settings, app_state: tauri::State<'_, AppState>) {
+  let client_guard = app_state.client.lock().unwrap();
+  let client = client_guard.as_ref().expect("Client should be initialized");
+
+  // Fetch input settings
+  let inputs_settings = match client.inputs().settings::<Value>(&settings.text_name).await {
     Ok(inputs_settings) => inputs_settings,
     Err(e) => {
       eprintln!("Error getting inputs settings: {:?}", e);
@@ -159,32 +169,43 @@ async fn update_settings(settings: Settings, app_state: tauri::State<'_, AppStat
   };
 
   let mut new_settings = inputs_settings.settings.clone();
+  new_settings.as_object_mut().unwrap().extend(create_additional_settings(&settings));
 
-  let mut additional_settings = Map::new();
-  additional_settings.insert("color".to_string(), Value::Number(serde_json::Number::from(settings.font_color)));
-  additional_settings.insert("font".to_string(), Value::Object({
-    let mut font_map = Map::new();
-    font_map.insert("face".to_string(), Value::String(settings.font_family.clone()));
-    font_map.insert("size".to_string(), Value::Number(serde_json::Number::from(300)));
-    font_map
-  }));
-  additional_settings.insert("outline".to_string(), Value::Bool(settings.outline.clone()));
-  additional_settings.insert("outline_size".to_string(), Value::Number(serde_json::Number::from(settings.outline_width)));
-  additional_settings.insert("outline_color".to_string(), Value::Number(serde_json::Number::from(settings.outline_color)));
-  new_settings.as_object_mut().unwrap().extend(additional_settings);
-
-  let set_settings = requests::inputs::SetSettings {
-    input: &settings.text_name.clone(),
+  let set_settings: requests::inputs::SetSettings<'_, Value> = requests::inputs::SetSettings {
+    input: &settings.text_name,
     settings: &new_settings,
     overlay: None,
   };
 
-  *settings_guard = Some(settings);
-  let result = client.as_ref().unwrap().inputs().set_settings(set_settings).await;
-
-  if let Err(e) = result {
+  if let Err(e) = client.inputs().set_settings(set_settings).await {
     eprintln!("Failed to set settings: {:?}", e);
   }
+
+  let mut settings_guard = app_state.settings.lock().unwrap();
+  *settings_guard = Some(settings);
+}
+
+fn create_additional_settings(settings: &Settings) -> Map<String, Value> {
+  let mut additional_settings = Map::new();
+
+  // Scene name
+  additional_settings.insert("scene_name".into(), Value::String(settings.scene_name.clone()));
+
+  // Font color
+  additional_settings.insert("color".into(), Value::Number(serde_json::Number::from(settings.font_color)));
+
+  // Font settings
+  let mut font_map = Map::new();
+  font_map.insert("face".into(), Value::String(settings.font_family.clone()));
+  font_map.insert("size".into(), Value::Number(serde_json::Number::from(300))); // このサイズ値（300）は元のコードに固定で書かれていたものと仮定しています。
+  additional_settings.insert("font".into(), Value::Object(font_map));
+
+  // Outline settings
+  additional_settings.insert("outline".into(), Value::Bool(settings.outline));
+  additional_settings.insert("outline_size".into(), Value::Number(serde_json::Number::from(settings.outline_width)));
+  additional_settings.insert("outline_color".into(), Value::Number(serde_json::Number::from(settings.outline_color)));
+
+  additional_settings
 }
 
 fn main() {
