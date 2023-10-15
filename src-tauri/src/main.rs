@@ -68,24 +68,32 @@ fn get_songs(app_state: tauri::State<AppState>) -> Vec<Song> {
 }
 
 #[tauri::command]
-fn add_song(song: String, app_state: tauri::State<AppState>) -> bool {
-  let mut songs = app_state.songs.lock().unwrap();
-  let length = songs.len() + 1;
-  songs.push(
-    Song {
-      id: length,
-      title: song,
-      artist: "".to_string(),
-    }
-  );
-  return true;
+fn add_song(song: String, app_state: tauri::State<AppState>) -> Result<(), String> {
+    let mut songs = match app_state.songs.lock() {
+        Ok(songs) => songs,
+        Err(_) => return Err("Failed to lock app state.".to_string()),
+    };
+
+    let new_id = songs.len() + 1;
+
+    songs.push(
+        Song {
+            id: new_id,
+            title: song,
+            artist: "".to_string(),
+        }
+    );
+    Ok(())
 }
 
 #[tauri::command]
-fn delete_song(index: usize, app_state: tauri::State<AppState>) -> bool  {
-  let mut songs = app_state.songs.lock().unwrap();
-  songs.remove(index);
-  return true;
+fn delete_song(index: usize, app_state: tauri::State<AppState>) -> Result<(), String> {
+    let mut songs = match app_state.songs.lock() {
+        Ok(songs) => songs,
+        Err(_) => return Err("Failed to lock app state.".to_string()),
+    };
+    songs.remove(index);
+    Ok(())
 }
 
 #[tauri::command]

@@ -19,14 +19,14 @@ export function useSongs() {
 
   async function addSong(song: string) {
     const result = await withOBSHandling(invoke('add_song', { song }), 'Error adding song')
-    if (result) {
+    if (!result) {
       await getSongs()
     }
   }
 
   async function deleteSong(index: number) {
     const result = await withOBSHandling(invoke('delete_song', { index }), 'Error deleting song')
-    if (result) {
+    if (!result) {
       await getSongs()
     }
   }
