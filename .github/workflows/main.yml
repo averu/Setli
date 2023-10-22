@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - release
-
 jobs:
   publish-tauri:
     permissions:
@@ -38,21 +37,11 @@ jobs:
           releaseBody: 'See the assets to download this version and install.'
           releaseDraft: true
           prerelease: false
-      - name: Install GitHub CLI, jq (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          choco install gh
-          choco install jq
-      # Windows用の環境変数設定
       - name: Get version from package.json (Windows)
         if: runner.os == 'Windows'
         run: |
           echo "APP_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
         shell: bash
-      - name: List current directory contents
-        run: |
-          ls ./src-tauri/target/release/bundle
-      # Windows (x86_64): Update gist with app.msi.sig content and url
       - name: Update gist with Windows (x86_64) signature and url
         if: matrix.platform == 'windows-latest'
         shell: bash
